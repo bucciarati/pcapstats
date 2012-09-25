@@ -10,6 +10,9 @@ typedef unsigned char u_char;
 #include <sys/time.h>
 #include <time.h>
 #include <unistd.h>
+#include <getopt.h>
+#include <string.h>
+#include <net/if.h>
 
 #define STATIC static
 
@@ -20,13 +23,44 @@ STATIC
 void alrm_handler (int signum);
 
 int main ( int argc, char ** argv ){
-  if ( argc != 3 ){
-    fprintf(stderr, "usage example: %s 'port 11211'\n", argv[0]);
-    exit(1);
+  char interface[IF_NAMESIZE + 1] = "eth0";
+  char *pcap_filter = NULL;
+
+  static struct option long_options[] = {
+    {"interface", required_argument, 0, 'i'},
+    {0, 0, 0, 0},
+  };
+
+  unsigned need_help = 0;
+  int c;
+  while ( ( c = getopt_long(argc, argv, "i:", long_options, NULL) ) != -1 ){
+    switch (c) {
+
+      case 'i':
+        strncpy(interface, optarg, IF_NAMESIZE);
+        fprintf(stderr, "setting interface to \"%s\"\n", interface);
+        break;
+
+      case '?':
+      default:
+        need_help = 1;
+        break;
+    }
   }
 
-  char *interface = argv[1];
-  char *rule = argv[2];
+  /* we want exactly one argument after the options */
+  if ( optind == argc - 1 ){
+    pcap_filter = argv[optind];
+    fprintf(stderr, "pcap_filter: [%s]\n", pcap_filter);
+  }
+
+  need_help = need_help || !pcap_filter;
+  if ( need_help ){
+    fprintf(stderr, "usage example: %s [-i eth1] 'port 11211'\n", argv[0]);
+    fprintf(stderr, "see man 7 pcap-filter for the argument format\n");
+    fprintf(stderr, "e.g. new incoming SSH connections per second: 'dst port 22 and tcp[13] == 2'\n");
+    exit(1);
+  }
 
   char errbuf[PCAP_ERRBUF_SIZE];
 
@@ -39,7 +73,7 @@ int main ( int argc, char ** argv ){
   );
 
   if ( capture == NULL ){
-    fprintf(stderr, "can't pcap_open_live(): [%s]\n", errbuf);
+    fprintf(stderr, "can't pcap_open_live(): [%s]\n", pcap_geterr(capture));
     exit(1);
   }
 
@@ -49,13 +83,23 @@ int main ( int argc, char ** argv ){
   int compiled = pcap_compile(
       capture,
       &fp,
-      rule,
+      pcap_filter,
       1,
       netmask
   );
 
   if ( compiled != 0 ){
-    fprintf(stderr, "can't pcap_open_live(): [%s]\n", errbuf);
+    fprintf(stderr, "can't pcap_compile(): [%s]\n", pcap_geterr(capture));
+    exit(1);
+  }
+
+  int filtering = pcap_setfilter(
+      capture,
+      &fp
+  );
+
+  if ( filtering != 0 ){
+    fprintf(stderr, "can't pcap_setfilter(): [%s]\n", pcap_geterr(capture));
     exit(1);
   }
 
