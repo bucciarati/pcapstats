@@ -22,23 +22,31 @@ void callback (u_char *, const struct pcap_pkthdr *, const u_char *);
 STATIC
 void alrm_handler (int signum);
 
+int fmt_unix = 0;
+
 int main ( int argc, char ** argv ){
   char interface[IF_NAMESIZE + 1] = "eth0";
   char *pcap_filter = NULL;
 
   static struct option long_options[] = {
     {"interface", required_argument, 0, 'i'},
+    {"unix-timestamp", no_argument, 0, 'u'},
     {0, 0, 0, 0},
   };
 
   unsigned need_help = 0;
   int c;
-  while ( ( c = getopt_long(argc, argv, "i:", long_options, NULL) ) != -1 ){
+  while ( ( c = getopt_long(argc, argv, "i:u", long_options, NULL) ) != -1 ){
     switch (c) {
 
       case 'i':
         strncpy(interface, optarg, IF_NAMESIZE);
         fprintf(stderr, "setting interface to \"%s\"\n", interface);
+        break;
+
+      case 'u':
+        fmt_unix = 1;
+        fprintf(stderr, "output format: UNIX timestamp\n");
         break;
 
       case '?':
@@ -56,7 +64,7 @@ int main ( int argc, char ** argv ){
 
   need_help = need_help || !pcap_filter;
   if ( need_help ){
-    fprintf(stderr, "usage example: %s [-i eth1] 'port 11211'\n", argv[0]);
+    fprintf(stderr, "usage example: %s [--interface|-i $iface] [--unix-timestamp|-u] 'port 11211'\n", argv[0]);
     fprintf(stderr, "see man 7 pcap-filter for the argument format\n");
     fprintf(stderr, "e.g. new incoming SSH connections per second: 'dst port 22 and tcp[13] == 2'\n");
     exit(1);
@@ -139,13 +147,21 @@ void alrm_handler (int signum){
     return;
 
   gettimeofday(&tv, NULL);
-  current_time = localtime(&tv.tv_sec);
 
-  fprintf(stdout, "%02d:%02d:%02d %lu\n",
-      current_time->tm_hour,
-      current_time->tm_min,
-      current_time->tm_sec,
-      count_times);
+  if ( fmt_unix ){
+    fprintf(stdout, "%u %lu\n",
+        (unsigned)tv.tv_sec,
+        count_times
+    );
+  } else {
+    current_time = localtime(&tv.tv_sec);
+    fprintf(stdout, "%02d:%02d:%02d %lu\n",
+        current_time->tm_hour,
+        current_time->tm_min,
+        current_time->tm_sec,
+        count_times
+    );
+  }
 
   /* reset so we get the delta per second */
   count_times = 0;
