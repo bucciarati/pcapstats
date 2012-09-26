@@ -41,12 +41,12 @@ int main ( int argc, char ** argv ){
 
       case 'i':
         strncpy(interface, optarg, IF_NAMESIZE);
-        fprintf(stderr, "setting interface to \"%s\"\n", interface);
+        fprintf(stderr, "# setting interface to \"%s\"\n", interface);
         break;
 
       case 'u':
         fmt_unix = 1;
-        fprintf(stderr, "output format: UNIX timestamp\n");
+        fprintf(stderr, "# output format: UNIX timestamp\n");
         break;
 
       case '?':
@@ -59,7 +59,7 @@ int main ( int argc, char ** argv ){
   /* we want exactly one argument after the options */
   if ( optind == argc - 1 ){
     pcap_filter = argv[optind];
-    fprintf(stderr, "pcap_filter: [%s]\n", pcap_filter);
+    fprintf(stderr, "# pcap_filter: [%s]\n", pcap_filter);
   }
 
   need_help = need_help || !pcap_filter;
