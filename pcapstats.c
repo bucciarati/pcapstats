@@ -81,7 +81,7 @@ int main ( int argc, char ** argv ){
   );
 
   if ( capture == NULL ){
-    fprintf(stderr, "can't pcap_open_live(): [%s]\n", pcap_geterr(capture));
+    fprintf(stderr, "can't pcap_open_live(): [%s]\n", errbuf);
     exit(1);
   }
 
