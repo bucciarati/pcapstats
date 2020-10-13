@@ -128,10 +128,12 @@ int main ( int argc, char ** argv ){
 }
 
 static unsigned long count_times = 0;
+static unsigned long count_bits = 0;
 
 STATIC
 void callback (u_char *user __attribute__((unused)), const struct pcap_pkthdr *h __attribute__((unused)), const u_char *bytes __attribute((unused))){
   count_times++;
+  count_bits += 8 * h->len;
   /* fprintf(stdout, "I am called %lu (%p, %p, %p)\n", count_times, user, h, bytes); */
 }
 
@@ -149,22 +151,28 @@ void alrm_handler (int signum){
   gettimeofday(&tv, NULL);
 
   if ( fmt_unix ){
-    fprintf(stdout, "%u %lu\n",
+    fprintf(stdout, "%u %lu %lu\n",
         (unsigned)tv.tv_sec,
-        count_times
+        count_times,
+        count_bits
     );
   } else {
     current_time = localtime(&tv.tv_sec);
-    fprintf(stdout, "%02d:%02d:%02d %lu\n",
+    fprintf(stdout, "%02d:%02d:%02d %lu %lu\n",
         current_time->tm_hour,
         current_time->tm_min,
         current_time->tm_sec,
-        count_times
+        count_times,
+        count_bits
     );
   }
 
   /* reset so we get the delta per second */
   count_times = 0;
+  count_bits = 0;
 
   alarm(1);
 }
+
+/* vim: tabstop=2 shiftwidth=2 expandtab cindent:
+*/
